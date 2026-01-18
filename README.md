@@ -8,3 +8,17 @@ QCA first partitions the video into temporal segments and evaluates the informat
 The normalized contribution scores dynamically determine the keyframe budget allocation for each segment. Within each segment, QCA anchors on the most query-relevant frame and iteratively incorporates additional frames to maximize diversity while maintaining high semantic relevance to the query.
 Crucially, our method requires no additional training and can be seamlessly integrated into existing Video-LLMs. Extensive experiments across multiple long video understanding benchmarks demonstrate that our proposed approach achieves state-of-the-art performance and has strong generalization ability. For instance, QCA achieves 67.8\% on LongVideoBench using 128 frames, while GPT-4o achieves 66.7\% using 256 frames.
 ## Overview
+<p align="center">
+    <img src="./assets/overall_new_cropped (4) (1).png" width="80%"></a> <br>
+    The overall framework of our approach.
+</p>
+
+## Dataset 
+
+LongVideoBench
+
+VideoMME
+
+MLVU
+
+LVBench
