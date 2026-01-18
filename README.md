@@ -22,3 +22,31 @@ VideoMME
 MLVU
 
 LVBench
+
+## Blip ITM Score 
+We use the BLIP to compute the similarity score between frames and question.
+```python
+python blip_ITM_similarity_score.py --dataset_name [dataset_name] --dataset_path [your dataset path]
+```
+## DINO Feature Extraction
+We use the DINOv2 to extract the visual feature of videos.
+```python
+python dinov2_feature.py --dataset_name [dataset_name] --dataset_path [your dataset path] --output_file [your output path] --world_size [nums of gpus(e.g. 4)]
+```
+
+## QCA select keyframes
+```python
+python keyframe_select.py --dataset_name [dataset_name] --dataset_path [your dataset path] --num_segments [number of segments(e.g. 16)] --total_keep [number of all keyframes(e.g. 64)] --tau [0.6] --alpha[0.5] --output_dir [your output dir]
+```
+
+## qwen3-vl test
+```python
+cd qwen3-vl
+bash scripts/eval_qwen3_{dataset}.sh
+```
+
+## qwen3-vl test
+```python
+cd internvl_3.5
+bash scripts/eval_internvl3.5_{dataset}.sh
+```
