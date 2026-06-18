@@ -1,4 +1,4 @@
-# QCA: Query- and Content-Aware Keyframe Selection for Efficient Long Video Understanding
+# ECCV 2026 QCA: Query- and Content-Aware Keyframe Selection for Efficient Long Video Understanding
 This is the official implementaion of paper **QCA: Query- and Content-Aware Keyframe Selection for Efficient Long Video Understanding**
 ## Abstract
 Video understanding is often plagued by severe temporal redundancy, where processing dense frame sequences is both semantically inefficient and computationally expensive.
