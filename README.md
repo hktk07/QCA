@@ -23,15 +23,36 @@ MLVU
 
 LVBench
 
-## Blip ITM Score 
-We use the BLIP to compute the similarity score between frames and question.
+## Extract visual feature and compute ITM Score 
+We use the BLIP/CLIP to extract the visual feature of video frames and compute the ITM score between frames and question.
+For BLIP we use blip_feature_ITM_score.py e.g.,
 ```python
-python blip_ITM_similarity_score.py --dataset_name [dataset_name] --dataset_path [your dataset path]
+CUDA_VISIBLE_DEVICES=0,1,2,3 \
+torchrun --standalone --nproc_per_node=4 \
+blip_feature_ITM_score.py \
+--dataset_name MLVU \
+--dataset_path your_mlvu_dataset_path \
+--extract_feature_model blip \
+--output_dir your_output_dir \
+--device cuda \
+--min_frames 128 \
+--batch_size 128 \
+--num_workers 4
 ```
-## DINO Feature Extraction
-We use the DINOv2 to extract the visual feature of videos.
+
+For CLIP we use clip_feature_ITM_score.py e.g.,
 ```python
-python dinov2_feature.py --dataset_name [dataset_name] --dataset_path [your dataset path] --output_file [your output path] --world_size [nums of gpus(e.g. 4)]
+CUDA_VISIBLE_DEVICES=0,1,2,3 \
+torchrun --standalone --nproc_per_node=4 \
+clip_feature_ITM_socre.py \
+--dataset_name MLVU \
+--dataset_path /data/jsb/datasets/MLVU \
+--extract_feature_model clip \
+--output_dir clip_feature_mlvu_test \
+--device cuda \
+--min_frames 128 \
+--batch_size 128 \
+--num_workers 4
 ```
 
 ## QCA select keyframes
