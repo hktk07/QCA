@@ -44,7 +44,7 @@ For CLIP we use clip_feature_ITM_score.py e.g.,
 ```python
 CUDA_VISIBLE_DEVICES=0,1,2,3 \
 torchrun --standalone --nproc_per_node=4 \
-clip_feature_ITM_socre.py \
+clip_feature_ITM_score.py \
 --dataset_name MLVU \
 --dataset_path /data/jsb/datasets/MLVU \
 --extract_feature_model clip \
