@@ -11,8 +11,8 @@ CHUNKS=${#GPUS[@]}
 echo "Use GPUs: ${GPUS[*]}"
 echo "Total chunks: $CHUNKS"
 
-base_output_name="frame_64_clip_12_gemma_0.5_beta_0.5_softmax_tau_1"
-keyframe_path="/longvideobench_keyframes/${base_output_name}"
+base_output_name="output_name"
+keyframe_path="keyframe_path"
 output_dir="/output/${model}/longvideobench_${base_output_name}"
 mkdir -p "$output_dir"
 
