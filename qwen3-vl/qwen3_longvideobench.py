@@ -1,13 +1,10 @@
-# from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
 from transformers import AutoModelForImageTextToText, AutoProcessor
 from qwen_vl_utils_new import process_vision_info
 import os
 import torch
 import argparse
-# import random
 import math
-from decord import VideoReader, cpu
-import numpy as np
+
 def split_list(lst, n):
     """Split a list into n (roughly) equal-sized chunks"""
     chunk_size = math.ceil(len(lst) / n)  # integer division
@@ -106,16 +103,16 @@ def run_inference(args):
     # print(args.model_path)
     
     model = AutoModelForImageTextToText.from_pretrained(
-    "qwen3-vl/qwen3-vl-8b",
+    "/models/qwen3-vl-8b",
     dtype=torch.bfloat16,
-    # attn_implementation="flash_attention_2",  
+    attn_implementation="flash_attention_2",  
     # device_map="auto",
 )
     model.to("cuda:0")
 
     # processor = AutoProcessor.from_pretrained(args.model_path,size={"longest_edge": 128*128, "shortest_edge": 256*256})
     # processor = AutoProcessor.from_pretrained(args.model_path)
-    processor = AutoProcessor.from_pretrained("qwen3-vl/qwen3-vl-8b")
+    processor = AutoProcessor.from_pretrained("/models/qwen3-vl-8b")
     gt_qa_pairs = json.load(open(args.gt_file, "r"))
     gt_questions = []
     keyframe_num = 0
@@ -123,14 +120,10 @@ def run_inference(args):
         question = item['question']
         option = [". ".join([chr(ord("A")+i), candidate]) for i, candidate in enumerate(item["candidates"])]
         qid = item['id']
-
         video_id = item["video_path"].split('.')[0]
         answer_id = chr(ord("A")+item["correct_choice"])
         answer = item["candidates"][item["correct_choice"]]
-
         duration_group = item['duration_group']
-
-
         index2ans = {}
         for i in range(len(item["candidates"])):
             idx = chr(ord("A")+i)
@@ -154,7 +147,7 @@ def run_inference(args):
         output_name = f"{args.num_chunks}_{args.chunk_idx}"
     else:
         output_name = args.output_name
-    answers_file = os.path.join(args.output_dir, f"{output_name}.json")  # 你当前用的是 .json（JSONL 格式）
+    answers_file = os.path.join(args.output_dir, f"{output_name}.json")  
 
     # —— 读取已存在的 id —— 
     existing_ids = set()
@@ -169,37 +162,28 @@ def run_inference(args):
                     if "id" in rec:
                         existing_ids.add(rec["id"])
                 except json.JSONDecodeError:
-                    # 如果存在坏行，忽略以保证不中断
                     continue
     # —— 以追加模式打开输出文件 —— 
     ans_file = open(answers_file, "a", encoding="utf-8")
-    miss_qid = []
-    # i=0
-    import time
-    start = time.time()
-    i=0
     for line in tqdm(gt_qa_pairs):
-        i+=1
-        # print(sample)
-        # i+=1
-        # if i<1850:
-        #     continue
-        # print(sample)
+
         qid = line["qid"]
         if qid in existing_ids:
             continue
-
         answer = line["answer"]
         video_id = line["video_id"]
         answer_id = line["answer_id"]
         option = line["option"]
         index2ans = line["index2ans"]
         duration_group = line["duration_group"]
-
-        question = [line['question']] + option
-        question = '\n'.join(question)
-        question = f'{question}\nPlease answer directly with only the letter of the correct option and nothing else.'
-
+        question = (
+        f"Question:\n{line['question']}\n"
+        + "Options:\n"
+        + '\n'.join(option)
+    )
+        option_prompt = "Select the best answer to the following multiple-choice question based on the video." \
+        " Respond with only the letter (A, B, C or D) of the correct option."
+        question = option_prompt + "\n" + f"{question}\nAnswer with the option's letter from the given choices directly. " 
         sample_set = {
             "id": qid, 
             "video_id": video_id,
@@ -209,89 +193,32 @@ def run_inference(args):
             'answer': answer,
         }
         video_path = os.path.join(args.video_dir, f'{video_id}.mp4')
-        # print('video_path', video_path)
 
-                # === 控制时间维：均匀采样 128 帧 ===
-        NUM_FRAMES = 64
-
-        # === 控制空间维：单帧在 256x256 ~ 512x512 之间 ===
-        # 这两个量是 smart_resize 用的总体体素(t*h*w)上下限
-        # MIN_FRAME_EDGE = 256
-        # MAX_FRAME_EDGE = 512
-        # MIN_PIXELS = NUM_FRAMES * MIN_FRAME_EDGE * MIN_FRAME_EDGE
-        # MAX_PIXELS = NUM_FRAMES * MAX_FRAME_EDGE * MAX_FRAME_EDGE
         print('args.keyframe_path',args.keyframe_path)
         if args.keyframe_path!='None':
-            text_path = f'{args.keyframe_path}/{sample_set["id"]}.txt'
+            text_path = f"{args.keyframe_path}/{sample_set['id']}.txt"
+            print(text_path)
             if not os.path.exists(text_path):
+                print('Keyframe file not found for sample id:', sample_set['id'])
                 continue
             with open(text_path, "r", encoding="utf-8") as f:
-                lines = f.readlines()  # 每行是一个字符串
-            # 转成整数列表
+                lines = f.readlines() 
                 keyframes = [int(line.strip()) for line in lines if line.strip()]
-                # print(keyframes)
         else:
-            vr = VideoReader(video_path, ctx=cpu(0))
-            total_frames = len(vr)
-            n_frames=64
-            if n_frames <= 0:
-                raise ValueError("n_frames 必须为正整数")
-            if n_frames > total_frames:
-                # 如果想强制 n_frames 不超过总帧数，可以改成 raise
-                n_frames = total_frames
-            # 在 [0, total_frames-1] 之间均匀采样 n_frames 个索引
-            # 使用 linspace 再取整，保证首尾都包含
-            keyframes = np.linspace(0, total_frames - 1, n_frames, dtype=np.int32).tolist()
-        # print(keyframes)
-        # exit(0)
-
-        # print('video_path', video_path)
-
+            keyframes = []
         messages = [
             {
                 "role": "user",
                 "content": [
                     {
                         "type": "video",
-                        "video": video_path,      # 本地路径
-                        # "min_pixels": 256 * 256,
-                        # "max_pixels": 320 *320,
-                        # "total_pixels": 40960 * 32 * 32,
-                        # "nframes": 64,
+                        "video": video_path,      
                         "keyframes":keyframes
-                        # 让处理器均匀采 128 帧
-                        # "num_frames": NUM_FRAMES, # 与 fps 互斥，别再传 fps
-                        # 通过总体体素上下限，约束单帧空间尺寸在 256~512（按32对齐）
-                        # "min_pixels": MIN_PIXELS,
-                        # "max_pixels": MAX_PIXELS,
-                        # 可选：给个“预算上限”，不需要也可删
-                        # "total_pixels": MAX_PIXELS,
                     },
                     {"type": "text", "text": question},
                 ],
             }
         ]
-
-        # messages = [
-        #     {
-        #         "role": "user",
-        #         "content": [
-        #             {
-        #                 "type": "video",
-        #                 "video": video_path,  # 本地路径而不是url
-        #                 "min_pixels": 4 * 32 * 32,
-        #                 "max_pixels": 256 * 32 * 32,
-        #                 "total_pixels": 20480 * 32 * 32,
-        #             },
-        #             {"type": "text", "text": prompt},
-        #         ],
-        #     }
-        # ]
-        # print(messages)
-        # 准备输入
-        # import pdb
-        # pdb.set_trace()
-
         text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         images, videos, video_kwargs = process_vision_info(messages, image_patch_size=16, return_video_kwargs=True, return_video_metadata=True)
         if videos is not None:
@@ -315,22 +242,15 @@ def run_inference(args):
         pixel_values_videos torch.Size([45288, 1536])
         video_grid_thw torch.Size([1, 3])
         '''
-        # print(f"Shape of pixel_values: {inputs['pixel_values'].shape}")#torch.Size([14308, 1176])
-        # print(f"Shape of image_grid_thw: {inputs['image_grid_thw'].shape}")
-        # 生成参数（对应你提供的环境变量）
-        # do_sample = os.getenv("greedy", "false") # greedy=false -> 采样
-        do_sample = False
-        # print(do_sample)
+        do_sample=False
         generation_kwargs = {
             "do_sample": do_sample,
             "top_p": float(os.getenv("top_p", 0.8)),
             "top_k": int(os.getenv("top_k", 20)),
             "temperature": float(os.getenv("temperature", 0.7)),
             "repetition_penalty": float(os.getenv("repetition_penalty", 1.0)),
-            "max_new_tokens": int(os.getenv("out_seq_length", 32)),  # 16384 可能过大，这里给个更安全默认
+            "max_new_tokens": int(os.getenv("out_seq_length", 32)), 
         }
-
-        # 推理生成输出
         generated_ids = model.generate(**inputs, **generation_kwargs)
         generated_ids_trimmed = [
             out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
@@ -338,8 +258,6 @@ def run_inference(args):
         outputs = processor.batch_decode(
             generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
         )[0]
-        end = time.time()
-        print((end-start)/i)
         print(outputs)
         parsed_pred = parse_multi_choice_response(outputs, ["A", "B", "C", "D","E"], index2ans)
         sample_set['acc'] = str(parsed_pred == answer_id)   
@@ -347,16 +265,8 @@ def run_inference(args):
         print('parsed_pred', parsed_pred)
         print('outputs', outputs)
         print('sample_set[acc]', sample_set['acc'])
-        # ans_id = shortuuid.uuid()
         ans_file.write(json.dumps(sample_set)+ "\n")
-        # output_text = output_text[0].replace("In the image", "In the video")
-        #         # print(output)
-        # sample_set["pred"] = output_text
-        # # print(output_text)
-        # ans_file.write(json.dumps(sample_set) + "\n")
-        # exit(0)
     ans_file.close()
-# print(output_text)
 
 def parse_args():
     """
@@ -368,23 +278,9 @@ def parse_args():
     parser.add_argument("--output_dir", help="Directory to save the model results JSON.", required=True)
     parser.add_argument("--output_name", help="Name of the file for storing results JSON.", required=True)
     parser.add_argument("--model_path", type=str, required=True)
-    # parser.add_argument("--model_base", type=str, default=None)
-    # parser.add_argument("--conv_mode", type=str, default="vicuna_v1")
     parser.add_argument("--num_chunks", type=int, default=1)
     parser.add_argument("--chunk_idx", type=int, default=0)
     parser.add_argument("--keyframe_path", type=str, default=None)
-    # parser.add_argument("--num_frames", type=int, default=100)
-    # parser.add_argument("--temperature", type=float, default=0.2)
-    # parser.add_argument("--top_p", type=float, default=None)
-    # parser.add_argument("--num_beams", type=int, default=1)
-    # parser.add_argument("--input_structure", type=str, default="image_seq")
-    # parser.add_argument("--image_aspect_ratio", type=str, default=None)
-    # parser.add_argument("--temporal_aggregation", type=str, default=None)
-    # parser.add_argument("--rope_scaling_factor", type=int, default=1)
-    # parser.add_argument("--key_frame_path", type=str, default=None)
-    # parser.add_argument("--prune_mode", type=str, default=None)
-    # parser.add_argument("--rate", help='this_global_rate', type=float,default=None)
-    # parser.add_argument("--tokens_num", help='tokens_num', type=int,default=936)
     return parser.parse_args()
 
 
