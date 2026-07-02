@@ -23,7 +23,13 @@ Crucially, our method requires no additional training and can be seamlessly inte
 | LVBench | https://huggingface.co/datasets/lmms-lab/LVBench/tree/main |
 
 ---
+### 🤖 Models
 
+| Model | Download Link |
+|--------|--------------|
+| LLaVA-Video-7B-Qwen2 | https://huggingface.co/lmms-lab/LLaVA-Video-7B-Qwen2 |
+| Qwen3-VL-8B-Instruct | https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct |
+| InternVL3_5-8B | https://huggingface.co/OpenGVLab/InternVL3_5-8B |
 ## Environment set up
 ### Extract video frame feature and select keyframes 
 ```
