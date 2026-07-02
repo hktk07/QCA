@@ -31,13 +31,12 @@ Crucially, our method requires no additional training and can be seamlessly inte
 | Qwen3-VL-8B-Instruct | https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct |
 | InternVL3_5-8B | https://huggingface.co/OpenGVLab/InternVL3_5-8B |
 ## Environment set up
-### Extract video frame feature and select keyframes 
 ```
-conda create -n keyframe python==3.10.0
-conda activate keyframe
+conda create -n qca python==3.10.0
+conda activate qca
 pip install torch==2.2.1 torchvision==0.17.1 torchaudio==2.2.1 \
 --index-url https://download.pytorch.org/whl/cu121
-pip install transformers==4.57.3 decord einops accelerate==0.26.0 numpy==1.26.1
+pip install transformers==4.57.3 decord einops accelerate==0.26.0 numpy==1.26.1 pandas
 pip install salesforce-lavis
 ```
 When using blip extract visual feature and compute ITM score, the package "lavis" not return teh visual feature,
@@ -99,16 +98,26 @@ clip_feature_ITM_score.py \
 
 ## QCA select keyframes
 ```python
-python keyframe_select.py --dataset_name [dataset_name] --dataset_path [your dataset path] --num_segments [number of segments(e.g. 16)] --total_keep [number of all keyframes(e.g. 64)] --tau [0.6] --alpha[0.5] --output_dir [your output dir]
+python keyframe_select.py
+    --dataset_name [dataset_name]
+    --dataset_path [your dataset path]
+    --num_segments [number of segments(e.g. 16)]
+    --total_keep [number of all keyframes(e.g. 64)]
+    --tau [0.6]
+    --alpha[0.5]
+    --output_dir [your output dir]
 ```
 
-## qwen3-vl test
+## Evaluation
+### LLaVA-Video 
+For LLaVA-Video we use the same evaluation method as [AKS](https://github.com/ncTimTang/AKS), we only change the keyframe files.  
+### Qwen3-vl
 ```python
 cd qwen3-vl
 bash scripts/eval_qwen3_{dataset}.sh
 ```
 
-## qwen3-vl test
+### Internvl-3.5
 ```python
 cd internvl_3.5
 bash scripts/eval_internvl3.5_{dataset}.sh
