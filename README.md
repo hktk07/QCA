@@ -13,15 +13,51 @@ Crucially, our method requires no additional training and can be seamlessly inte
     The overall framework of our approach.
 </p>
 
-## Dataset 
+## Video Datasets
 
-LongVideoBench
+| Dataset | Download Link |
+|----------|--------------|
+| LongVideoBench | https://huggingface.co/datasets/longvideobench/LongVideoBench |
+| Video-MME | https://huggingface.co/datasets/lmms-lab/Video-MME |
+| MLVU | https://huggingface.co/datasets/MLVU/MVLU |
+| LVBench | https://huggingface.co/datasets/lmms-lab/LVBench/tree/main |
 
-VideoMME
+---
 
-MLVU
+## Environment set up
+### Extract video frame feature and select keyframes 
+```
+conda create -n keyframe python==3.10.0
+conda activate keyframe
+pip install torch==2.2.1 torchvision==0.17.1 torchaudio==2.2.1 \
+--index-url https://download.pytorch.org/whl/cu121
+pip install transformers==4.57.3 decord einops accelerate==0.26.0 numpy==1.26.1
+pip install salesforce-lavis
+```
+When using blip extract visual feature and compute ITM score, the package "lavis" not return teh visual feature,
+so you need find the
+```
+lavis/models/blip_models/blip_image_text_matching.py
+e.g., /home/anaconda3/envs/keyframe/lib/python3.10/site-packages/lavis/models/blip_models/blip_image_text_matching.py
+```
+in lavis package and change the code in line 74-85 to
+``` python
+if match_head == "itm":
+    encoder_input_ids = text.input_ids.clone()
+    encoder_input_ids[:, 0] = self.tokenizer.enc_token_id  # extra code
 
-LVBench
+    output = self.text_encoder(
+        encoder_input_ids,
+        attention_mask=text.attention_mask,
+        encoder_hidden_states=image_embeds,
+        encoder_attention_mask=image_atts,
+        return_dict=True,
+    )
+
+    itm_output = self.itm_head(output.last_hidden_state[:, 0, :])
+
+    return itm_output, image_embeds
+```
 
 ## Extract visual feature and compute ITM Score 
 We use the BLIP/CLIP to extract the visual feature of video frames and compute the ITM score between frames and question.
